@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Job Confirmation — Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh}
+
+.header{background:#1a3a5c;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.header h1{color:#fff;font-size:16px;font-weight:500}
+.header-right{display:flex;align-items:center;gap:10px}
+.date-picker{padding:7px 10px;font-size:13px;border:1px solid rgba(255,255,255,.3);border-radius:7px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;width:100px;position:relative}
+.date-picker::-webkit-calendar-picker-indicator{filter:invert(1);cursor:pointer;position:absolute;top:0;left:0;width:100%;height:100%;opacity:0}
+.refresh-btn{padding:7px 14px;font-size:12px;border:1px solid rgba(76,175,80,.5);border-radius:7px;background:rgba(255,255,255,.1);color:#fff;cursor:pointer;transition:background .15s;display:flex;align-items:center;gap:6px}
+.refresh-btn:hover{background:rgba(255,255,255,.2)}
+.refresh-icon{font-size:16px;color:#4caf50;line-height:1}
+
+.wrap{max-width:1200px;margin:0 auto;padding:16px}
+
+.kpi-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px}
+.kpi-card{border-radius:12px;padding:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:90px}
+.kpi-card.red{background:#c0392b}
+.kpi-card.blue{background:#2471a3}
+.kpi-num{font-size:42px;font-weight:500;color:#fff;line-height:1}
+.kpi-label{font-size:12px;color:rgba(255,255,255,.85);margin-top:6px}
+
+.mid-row{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:12px;margin-bottom:14px}
+.panel{background:#fff;border:0.5px solid #e0e0e0;border-radius:12px;padding:14px}
+.panel-title{font-size:13px;font-weight:500;color:#1a3a5c;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+
+.risk-table{width:100%;font-size:12px;border-collapse:collapse}
+.risk-table th{text-align:center;color:#888;font-weight:400;padding:4px 6px;border-bottom:1px solid #f0f0f0;font-size:11px;position:sticky;top:0;background:#fff;z-index:1}
+.risk-table td{padding:4px 6px;color:#1a1a1a;border-bottom:0.5px solid #f5f5f5;text-align:center}
+.risk-table-wrap{overflow-y:auto;max-height:224px}
+.badge-high{background:#fde8e8;color:#c0392b;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:500}
+.badge-gen{background:#e8f0fd;color:#2471a3;border-radius:4px;padding:1px 7px;font-size:11px;font-weight:500}
+.badge-dash{color:#ccc;font-size:11px;padding:1px 7px}
+
+.data-table-wrap{overflow-y:auto;overflow-x:auto;max-height:360px}
+.search-bar{display:flex;gap:8px;margin-bottom:10px;align-items:center}
+.search-bar input{flex:1;padding:7px 12px;font-size:13px;border:1px solid #d0d5dd;border-radius:8px;outline:none;transition:border-color .15s}
+.search-bar input:focus{border-color:#1a3a5c}
+.search-bar .clear-btn{padding:6px 10px;font-size:12px;border:1px solid #d0d5dd;border-radius:7px;background:#fff;color:#888;cursor:pointer}
+.search-bar .clear-btn:hover{background:#f0f0f0}
+.search-hint{font-size:11px;color:#aaa;margin-bottom:6px}
+.data-table-wrap::-webkit-scrollbar{width:5px;height:5px}
+.data-table-wrap::-webkit-scrollbar-track{background:#f5f5f5;border-radius:4px}
+.data-table-wrap::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px}
+.data-table-wrap::-webkit-scrollbar-thumb:hover{background:#aaa}
+.risk-table-wrap::-webkit-scrollbar{width:4px}
+.risk-table-wrap::-webkit-scrollbar-track{background:#f5f5f5;border-radius:4px}
+.risk-table-wrap::-webkit-scrollbar-thumb{background:#ccc;border-radius:4px}
+
+#map{height:200px;border-radius:8px;overflow:hidden;border:0.5px solid #e0e0e0}
+.map-legend{display:flex;gap:12px;font-size:11px;color:#666;margin-bottom:6px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;margin-right:3px;vertical-align:middle}
+.dot.red{background:#c0392b}
+.dot.blue{background:#2471a3}
+
+.tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab-btn{padding:5px 12px;font-size:12px;border-radius:7px;border:0.5px solid #d0d5dd;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+.tab-btn.active{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+
+.data-table{width:100%;font-size:12px;border-collapse:collapse}
+.data-table th{text-align:center;padding:8px 10px;background:#1a3a5c;color:#fff;font-weight:400;font-size:11px;white-space:nowrap}
+.data-table td{padding:7px 10px;color:#1a1a1a;border-bottom:0.5px solid #f0f0f0;white-space:nowrap;text-align:center}
+.data-table tr:hover td{background:#f7f9fc}
+.type-high{color:#c0392b;font-weight:500}
+.type-gen{color:#2471a3;font-weight:500}
+
+.export-row{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.export-btn{padding:6px 14px;font-size:12px;border-radius:7px;border:0.5px solid #d0d5dd;background:#fff;color:#333;cursor:pointer;display:flex;align-items:center;gap:5px;transition:background .15s}
+.export-btn:hover{background:#f0f4f8}
+.export-btn.excel{border-color:#1d6f42;color:#1d6f42}
+.export-btn.excel:hover{background:#f0faf4}
+.export-btn.pdf{border-color:#c0392b;color:#c0392b}
+.export-btn.pdf:hover{background:#fff5f5}
+.chart-toggle{display:flex;gap:4px;margin-bottom:8px}
+.chart-toggle-btn{padding:3px 10px;font-size:11px;border-radius:5px;border:0.5px solid #d0d5dd;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+.chart-toggle-btn.active{background:#1a3a5c;color:#fff;border-color:#1a3a5c}
+
+.empty-state{text-align:center;padding:40px;color:#aaa;font-size:13px}
+
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,.7);display:flex;align-items:center;justify-content:center;z-index:9999;font-size:14px;color:#1a3a5c;display:none}
+
+@media(max-width:700px){
+  .mid-row{grid-template-columns:1fr}
+  .kpi-row{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>📋 Daily Job Confirmation — Dashboard</h1>
+  <div class="header-right">
+    <input type="date" id="datePicker" class="date-picker" onchange="onDateChange()">
+    <button class="refresh-btn" onclick="loadData()"><span class="refresh-icon">⟳</span> Refresh</button>
+  </div>
+</div>
+
+<div class="loading-overlay" id="loading">⏳ กำลังโหลดข้อมูล...</div>
+
+<div class="wrap">
+
+  <div class="kpi-row">
+    <div class="kpi-card red">
+      <div class="kpi-num" id="kpiHigh">—</div>
+      <div class="kpi-label">High-Risk Work</div>
+    </div>
+    <div class="kpi-card blue">
+      <div class="kpi-num" id="kpiGeneral">—</div>
+      <div class="kpi-label">General Work</div>
+    </div>
+  </div>
+
+  <div class="mid-row">
+    <div class="panel">
+      <div class="panel-title">📊 Work trend</div>
+      <div style="display:flex;gap:12px;font-size:11px;color:#666;margin-bottom:8px;white-space:nowrap">
+        <span><span class="dot red"></span>High-Risk Work</span>
+        <span><span class="dot blue"></span>General Work</span>
+      </div>
+      <div style="position:relative;height:160px">
+        <canvas id="monthChart" role="img" aria-label="กราฟแท่งจำนวนงานรายเดือน">กราฟแสดงจำนวนงานรายเดือน</canvas>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:6px">
+        <div class="chart-toggle">
+          <button class="chart-toggle-btn active" onclick="setChartView('daily')">Daily</button>
+          <button class="chart-toggle-btn" onclick="setChartView('monthly')">Monthly</button>
+          <button class="chart-toggle-btn" onclick="setChartView('yearly')">Yearly</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">🏭 Work area</div>
+      <div class="risk-table-wrap">
+        <table class="risk-table">
+          <thead><tr><th>Work area</th><th>High-Risk Work</th><th>General Work</th></tr></thead>
+          <tbody id="riskBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" style="padding:12px">
+      <div class="panel-title">🗺 Construction map</div>
+      <div class="map-legend">
+        <span><span class="dot red"></span>High-Risk Work</span>
+        <span><span class="dot blue"></span>General Work</span>
+      </div>
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-title" style="margin-bottom:8px">📑 Work details</div>
+    <div class="tab-row" id="areaTabs"></div>
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="🔍 ค้นหา ชื่องาน, บริษัท, ผู้ควบคุม, พื้นที่..." oninput="onSearch()">
+      <button class="clear-btn" onclick="clearSearch()">ล้าง</button>
+    </div>
+    <div class="search-hint" id="searchHint"></div>
+    <div class="data-table-wrap">
+      <table class="data-table">
+        <thead style="position:sticky;top:0;z-index:2">
+          <tr>
+            <th>วันที่ทำงาน</th><th>ชื่องาน</th><th>ชื่อบริษัท</th><th>จำนวนผู้ปฏิบัติงาน</th><th>ประเภทงาน</th><th>ลักษณะความเสี่ยง</th><th>ผู้ควบคุมงาน</th><th>Section</th><th>เบอร์ติดต่อ</th><th>ชื่อเจ้าของพื้นที่</th><th>หน่วยงานเจ้าของพื้นที่</th><th>เบอร์ติดต่อ</th><th>ผ่านการอบรมด้านความปลอดภัย</th><th>รถที่ไม่ใช่รถยนต์ส่วนบุคคล</th>
+          </tr>
+        </thead>
+        <tbody id="dataBody"></tbody>
+      </table>
+    </div>
+    <div class="export-row">
+      <button class="export-btn excel" onclick="exportExcel()">⬇ Export Excel</button>
+      <button class="export-btn pdf" onclick="exportPDF()">⬇ Export PDF</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPWm5X_MvcEf7i2mUPWsxvYIKMUdzgBkeyAA4--OxceTUdN1RNvHPeKnWJsxTNYWaf/exec';
+const AREAS = ['All','GA','SP-1','SP-2','SP-3','EX','JP','UM','IC','QC','HR','OSEC','TTEC','TFTC'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+let allData = [];
+let mapInstance = null;
+let activeArea = 'All';
+let monthChartInstance = null;
+let chartView = 'daily';
+
+// Set today using local time
+(function() {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = String(today.getMonth()+1).padStart(2,'0');
+  const d = String(today.getDate()).padStart(2,'0');
+  document.getElementById('datePicker').value = `${y}-${m}-${d}`;
+})();
+
+function getSelectedDate() {
+  return document.getElementById('datePicker').value;
+}
+
+function onDateChange() {
+  loadData();
+}
+
+function formatDate(raw) {
+  if (!raw) return '—';
+  const str = String(raw);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    const p = str.split('-');
+    return `${p[2]}/${p[1]}/${p[0]}`;
+  }
+  const d = new Date(str);
+  if (isNaN(d)) return str;
+  const localD = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const day = String(localD.getUTCDate()).padStart(2,'0');
+  const mon = String(localD.getUTCMonth()+1).padStart(2,'0');
+  return `${day}/${mon}/${localD.getUTCFullYear()}`;
+}
+
+
+
+function sameDay(rawDate, selectedYMD) {
+  if (!rawDate) return false;
+  const str = String(rawDate);
+  // Plain YYYY-MM-DD (no time) — compare directly
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return str === selectedYMD;
+  }
+  // ISO string from Sheets e.g. "2026-06-25T17:00:00.000Z"
+  // Sheets stores Thailand date input as UTC+7, so add 7hrs offset before extracting date
+  const d = new Date(str);
+  const localD = new Date(d.getTime() + 7 * 60 * 60 * 1000);
+  const y = localD.getUTCFullYear();
+  const m = String(localD.getUTCMonth()+1).padStart(2,'0');
+  const day = String(localD.getUTCDate()).padStart(2,'0');
+  return `${y}-${m}-${day}` === selectedYMD;
+}
+
+async function loadData() {
+  document.getElementById('loading').style.display = 'flex';
+  try {
+    const res = await fetch(SCRIPT_URL + '?t=' + Date.now());
+    allData = await res.json();
+  } catch(e) {
+    allData = [];
+  }
+  document.getElementById('loading').style.display = 'none';
+  activeArea = 'All';
+  renderAll();
+}
+
+function getFilteredByDate() {
+  const sel = getSelectedDate();
+  return allData.filter(d => sameDay(d['Date'], sel));
+}
+
+function renderAll() {
+  const filtered = getFilteredByDate();
+  renderKPI(filtered);
+  renderRiskTable(filtered);
+  renderMap(filtered);
+  renderTabs();
+  renderTable(filtered);
+  renderMonthChart();
+}
+
+function renderKPI(data) {
+  document.getElementById('kpiHigh').textContent = data.filter(d=>d['Risk Type']==='งานเสี่ยงสูง').length;
+  document.getElementById('kpiGeneral').textContent = data.filter(d=>d['Risk Type']==='งานทั่วไป').length;
+}
+
+function renderRiskTable(data) {
+  const tb = document.getElementById('riskBody');
+  tb.innerHTML = '';
+  const areas = AREAS.filter(a=>a!=='All');
+  const matched = new Set();
+  areas.forEach(area => {
+    const rows = data.filter(d=>(d['Area Owner']||'').trim()===area);
+    if (rows.length === 0) return;
+    rows.forEach(r=>matched.add(r));
+    const high = rows.filter(d=>d['Risk Type']==='งานเสี่ยงสูง').length;
+    const gen  = rows.filter(d=>d['Risk Type']==='งานทั่วไป').length;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${area}</td><td>${high?`<span class="badge-high">${high}</span>`:`<span class="badge-dash">—</span>`}</td><td>${gen?`<span class="badge-gen">${gen}</span>`:`<span class="badge-dash">—</span>`}</td>`;
+    tb.appendChild(tr);
+  });
+  const unmatched = data.filter(d=>!matched.has(d));
+  if (unmatched.length) {
+    const high = unmatched.filter(d=>d['Risk Type']==='งานเสี่ยงสูง').length;
+    const gen  = unmatched.filter(d=>d['Risk Type']==='งานทั่วไป').length;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="color:#aaa;font-style:italic">อื่นๆ</td><td>${high?`<span class="badge-high">${high}</span>`:`<span class="badge-dash">—</span>`}</td><td>${gen?`<span class="badge-gen">${gen}</span>`:`<span class="badge-dash">—</span>`}</td>`;
+    tb.appendChild(tr);
+  }
+  if (!tb.children.length) {
+    tb.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#aaa;padding:16px;font-size:12px">ไม่มีข้อมูลในวันที่เลือก</td></tr>';
+  }
+}
+
+function renderMap(data) {
+  if (!mapInstance) {
+    mapInstance = L.map('map', {zoomControl:true, attributionControl:false}).setView([14.387103, 100.91285], 16);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 20
+    }).addTo(mapInstance);
+  }
+  mapInstance.eachLayer(layer => {
+    if (layer instanceof L.CircleMarker) mapInstance.removeLayer(layer);
+  });
+
+  const coordCount = {};
+  data.forEach(d => {
+    const key = `${d['Lat']},${d['Lng']}`;
+    coordCount[key] = (coordCount[key] || 0) + 1;
+  });
+  const coordIndex = {};
+  data.forEach(d => {
+    if (!d['Lat'] || !d['Lng']) return;
+    const key = `${d['Lat']},${d['Lng']}`;
+    coordIndex[key] = (coordIndex[key] || 0);
+    const total = coordCount[key];
+    const idx = coordIndex[key];
+    coordIndex[key]++;
+    let lat = parseFloat(d['Lat']);
+    let lng = parseFloat(d['Lng']);
+    if (total > 1) {
+      const angle = (2 * Math.PI * idx) / total;
+      const offset = 0.00005;
+      lat += offset * Math.cos(angle);
+      lng += offset * Math.sin(angle);
+    }
+    const color = d['Risk Type'] === 'งานเสี่ยงสูง' ? '#c0392b' : '#2471a3';
+    L.circleMarker([lat, lng], {
+      radius: 9, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.9
+    }).bindPopup(`<b>${d['Company']||'—'}</b><br>${d['Job Name']||'—'}<br>${d['Controller Name']||'—'}`).addTo(mapInstance);
+  });
+}
+
+function renderTabs() {
+  const tabs = document.getElementById('areaTabs');
+  tabs.innerHTML = '';
+  AREAS.forEach(a => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (a === activeArea ? ' active' : '');
+    btn.textContent = a;
+    btn.onclick = () => {
+      activeArea = a;
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const filtered = getFilteredByDate();
+      renderTable(filtered);
+    };
+    tabs.appendChild(btn);
+  });
+}
+
+function formatPhone(raw) {
+  if (!raw) return '—';
+  let digits = String(raw).replace(/\D/g, '');
+  // Sheets บางครั้งตัด 0 นำหน้าออกเพราะคิดว่าเป็นตัวเลข → เติมกลับ
+  if (digits.length === 9) digits = '0' + digits;
+  if (digits.length === 10) return `${digits.slice(0,3)}-${digits.slice(3,6)}-${digits.slice(6)}`;
+  return raw; // ถ้าไม่ตรง pattern คืนค่าเดิม
+}
+
+function renderTable(data) {
+  const tb = document.getElementById('dataBody');
+  tb.innerHTML = '';
+  let rows = activeArea === 'All' ? data : data.filter(d => d['Area Owner'] === activeArea);
+  if (typeof applySearch === 'function') rows = applySearch(rows);
+  if (!rows.length) {
+    tb.innerHTML = '<tr><td colspan="14" class="empty-state">ไม่มีข้อมูลในวันที่เลือก</td></tr>';
+    adjustTableHeight(1);
+    return;
+  }
+  rows.forEach(d => {
+    const tr = document.createElement('tr');
+    const isH = d['Risk Type']==='งานเสี่ยงสูง';
+    const riskLabel = isH ? 'High-Risk Work' : 'General Work';
+    tr.innerHTML = `
+      <td>${formatDate(d['Date'])}</td>
+      <td>${d['Job Name']||'—'}</td>
+      <td>${d['Company']||'—'}</td>
+      <td style="text-align:center">${d['Workers']||'—'}</td>
+      <td class="${isH?'type-high':'type-gen'}">${d['Risk Type']? riskLabel :'—'}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-size:11px" title="${d['Risk Sub Type']||''}">${d['Risk Sub Type']||'—'}</td>
+      <td>${d['Controller Name']||'—'}</td>
+      <td>${d['Controller Section']||'—'}</td>
+      <td>${d['Controller Phone'] ? formatPhone(d['Controller Phone']) : '—'}</td>
+      <td>${d['Owner Name']||'—'}</td>
+      <td>${d['Owner Section']||'—'}</td>
+      <td>${d['Owner Phone'] ? formatPhone(d['Owner Phone']) : '—'}</td>
+      <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-size:11px" title="${d['Safety Training']||''}">${d['Safety Training']||'—'}</td>
+      <td>${d['Vehicles']||'—'}</td>`;
+    tb.appendChild(tr);
+  });
+  adjustTableHeight(rows.length);
+}
+
+function adjustTableHeight(rowCount) {
+  const wrap = document.querySelector('.data-table-wrap');
+  if (!wrap) return;
+  // วัดความสูงจริงของแถวแรก (ถ้ามี) หรือใช้ค่า default 33px
+  const firstRow = document.querySelector('#dataBody tr');
+  const rowH = firstRow ? firstRow.offsetHeight : 33;
+  const headH = 36;
+  const maxRows = 10;
+  if (rowCount <= maxRows) {
+    // น้อยกว่า 10 แถว — ให้ความสูงพอดีกับข้อมูล ไม่มี scrollbar
+    wrap.style.maxHeight = 'none';
+    wrap.style.overflowY = 'visible';
+  } else {
+    // เกิน 10 แถว — จำกัดความสูงแล้วให้ scroll
+    wrap.style.maxHeight = (headH + rowH * maxRows) + 'px';
+    wrap.style.overflowY = 'auto';
+  }
+}
+
+function setChartView(view) {
+  chartView = view;
+  const labelMap = { daily: 'Daily', monthly: 'Monthly', yearly: 'Yearly' };
+  document.querySelectorAll('.chart-toggle-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === labelMap[view]);
+  });
+  renderMonthChart();
+}
+
+function renderMonthChart() {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1; // 1-12
+  let labels = [], highCounts = [], genCounts = [];
+
+  if (chartView === 'daily') {
+    // แสดงเฉพาะวันที่เลือกใน date picker — แท่งซ้อน High + General
+    const sel = getSelectedDate(); // "YYYY-MM-DD"
+    labels = [sel ? formatDate(sel) : 'Today'];
+    let h = 0, g = 0;
+    allData.forEach(d => {
+      if (!sameDay(d['Date'], sel)) return;
+      if (d['Risk Type'] === 'งานเสี่ยงสูง') h++;
+      else if (d['Risk Type'] === 'งานทั่วไป') g++;
+    });
+    highCounts = [h];
+    genCounts  = [g];
+
+  } else if (chartView === 'monthly') {
+    // แสดงเฉพาะเดือนปัจจุบัน แยกรายวัน
+    const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+    labels = Array.from({length: daysInMonth}, (_, i) => String(i + 1));
+    highCounts = Array(daysInMonth).fill(0);
+    genCounts  = Array(daysInMonth).fill(0);
+    allData.forEach(d => {
+      const str = String(d['Date'] || '');
+      let dayNum = 0;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        const p = str.split('-');
+        if (parseInt(p[0]) === currentYear && parseInt(p[1]) === currentMonth) dayNum = parseInt(p[2]);
+      } else {
+        const dt = new Date(str);
+        if (!isNaN(dt)) {
+          const local = new Date(dt.getTime() + 7 * 3600000);
+          if (local.getUTCFullYear() === currentYear && local.getUTCMonth() + 1 === currentMonth) dayNum = local.getUTCDate();
+        }
+      }
+      if (dayNum > 0) {
+        if (d['Risk Type'] === 'งานเสี่ยงสูง') highCounts[dayNum - 1]++;
+        else if (d['Risk Type'] === 'งานทั่วไป') genCounts[dayNum - 1]++;
+      }
+    });
+
+  } else if (chartView === 'yearly') {
+    // แสดงทั้งปีปัจจุบัน 12 เดือน
+    labels = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    highCounts = Array(12).fill(0);
+    genCounts  = Array(12).fill(0);
+    allData.forEach(d => {
+      const str = String(d['Date'] || '');
+      let mo = -1, yr = 0;
+      if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+        yr = parseInt(str.slice(0, 4));
+        mo = parseInt(str.slice(5, 7)) - 1;
+      } else {
+        const dt = new Date(str);
+        if (!isNaN(dt)) {
+          const local = new Date(dt.getTime() + 7 * 3600000);
+          yr = local.getUTCFullYear();
+          mo = local.getUTCMonth();
+        }
+      }
+      if (yr === currentYear && mo >= 0) {
+        if (d['Risk Type'] === 'งานเสี่ยงสูง') highCounts[mo]++;
+        else if (d['Risk Type'] === 'งานทั่วไป') genCounts[mo]++;
+      }
+    });
+  }
+
+  if (monthChartInstance) monthChartInstance.destroy();
+  monthChartInstance = new Chart(document.getElementById('monthChart'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'High-Risk Work', data: highCounts, backgroundColor: '#c0392b', borderRadius: 3 },
+        { label: 'General Work',   data: genCounts,  backgroundColor: '#2471a3', borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      layout: { padding: { top: 18 } },
+      plugins: {
+        legend: { display: false }
+      },
+      scales: {
+        x: { ticks: { font: { size: 10 }, color: '#888' }, grid: { display: false } },
+        y: {
+          ticks: { font: { size: 10 }, color: '#888', stepSize: 1, precision: 0 },
+          grid: { color: 'rgba(0,0,0,.06)' },
+          beginAtZero: true
+        }
+      },
+      animation: { duration: 300 }
+    },
+    plugins: [{
+      id: 'dataLabels',
+      afterDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        chart.data.datasets.forEach((dataset, i) => {
+          const meta = chart.getDatasetMeta(i);
+          if (meta.hidden) return;
+          meta.data.forEach((bar, j) => {
+            const val = dataset.data[j];
+            if (!val) return;
+            ctx.save();
+            ctx.fillStyle = '#555';
+            ctx.font = '10px Segoe UI, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(val, bar.x, bar.y - 1);
+            ctx.restore();
+          });
+        });
+      }
+    }]
+  });
+}
+
+const TABLE_HEADERS = ['วันที่ทำงาน','ชื่องาน','ชื่อบริษัท','จำนวนผู้ปฏิบัติงาน','ประเภทงาน','ลักษณะความเสี่ยง','ผู้ควบคุมงาน','Section','เบอร์ติดต่อ','ชื่อเจ้าของพื้นที่','หน่วยงานเจ้าของพื้นที่','เบอร์ติดต่อ (เจ้าของ)','ผ่านการอบรมด้านความปลอดภัย','รถที่ไม่ใช่รถยนต์ส่วนบุคคล'];
+
+function getExportRows() {
+  const filtered = getFilteredByDate();
+  const rows = activeArea === 'All' ? filtered : filtered.filter(d => d['Area Owner'] === activeArea);
+  return rows.map(d => {
+    const isH = d['Risk Type'] === 'งานเสี่ยงสูง';
+    return [
+      formatDate(d['Date']),
+      d['Job Name']||'',
+      d['Company']||'',
+      d['Workers']||'',
+      isH ? 'High-Risk Work' : 'General Work',
+      d['Risk Sub Type']||'',
+      d['Controller Name']||'',
+      d['Controller Section']||'',
+      formatPhone(d['Controller Phone']),
+      d['Owner Name']||'',
+      d['Owner Section']||'',
+      formatPhone(d['Owner Phone']),
+      d['Safety Training']||'',
+      d['Vehicles']||''
+    ];
+  });
+}
+
+function exportExcel() {
+  const rows = getExportRows();
+  const ws = XLSX.utils.aoa_to_sheet([TABLE_HEADERS, ...rows]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Work Details');
+  const date = getSelectedDate() || 'export';
+  XLSX.writeFile(wb, `WorkDetails_${date}.xlsx`);
+}
+
+function exportPDF() {
+  const filtered = getFilteredByDate();
+  const rows = activeArea === 'All' ? filtered : filtered.filter(d => d['Area Owner'] === activeArea);
+  const date = getSelectedDate() || '';
+  const areaLabel = activeArea === 'All' ? 'ทุกพื้นที่' : activeArea;
+
+  // สร้าง HTML สำหรับ print — ใช้ภาษาไทยได้ 100% ไม่มีเพี้ยน
+  const rowsHtml = rows.map(d => {
+    const isH = d['Risk Type'] === 'งานเสี่ยงสูง';
+    const riskColor = isH ? '#c0392b' : '#2471a3';
+    const riskLabel = isH ? 'High-Risk' : 'General';
+    return `<tr>
+      <td>${formatDate(d['Date'])}</td>
+      <td>${d['Job Name']||'—'}</td>
+      <td>${d['Company']||'—'}</td>
+      <td style="text-align:center">${d['Workers']||'—'}</td>
+      <td style="color:${riskColor};font-weight:600">${riskLabel}</td>
+      <td>${d['Risk Sub Type']||'—'}</td>
+      <td>${d['Controller Name']||'—'}</td>
+      <td>${d['Controller Section']||'—'}</td>
+      <td>${formatPhone(d['Controller Phone'])}</td>
+      <td>${d['Owner Name']||'—'}</td>
+      <td>${d['Owner Section']||'—'}</td>
+      <td>${formatPhone(d['Owner Phone'])}</td>
+      <td>${d['Safety Training']||'—'}</td>
+      <td>${d['Vehicles']||'—'}</td>
+    </tr>`;
+  }).join('');
+
+  const highCount = rows.filter(d => d['Risk Type']==='งานเสี่ยงสูง').length;
+  const genCount  = rows.filter(d => d['Risk Type']==='งานทั่วไป').length;
+
+  const html = `<!DOCTYPE html><html lang="th"><head>
+<meta charset="UTF-8">
+<title>Work Details — ${date}</title>
+<style>
+  @page { size: A4 landscape; margin: 10mm 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif; font-size: 8pt; color: #1a1a1a; }
+  .header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1.5px solid #1a3a5c; }
+  .header h1 { font-size: 12pt; font-weight: 600; color: #1a3a5c; }
+  .header .meta { font-size: 8pt; color: #666; text-align: right; line-height: 1.6; }
+  .summary { display: flex; gap: 12px; margin-bottom: 8px; }
+  .sum-box { padding: 4px 12px; border-radius: 5px; font-size: 8pt; font-weight: 500; }
+  .sum-box.high { background: #fde8e8; color: #c0392b; border: 0.5px solid #f5c6c6; }
+  .sum-box.gen  { background: #e8f0fd; color: #2471a3; border: 0.5px solid #c0d4f5; }
+  .sum-box.total{ background: #f0f2f5; color: #333;    border: 0.5px solid #ddd; }
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  th { background: #1a3a5c; color: #fff; padding: 5px 4px; font-size: 7.5pt; font-weight: 500; text-align: center; white-space: nowrap; }
+  td { padding: 4px; font-size: 7.5pt; border-bottom: 0.5px solid #eee; vertical-align: top; word-break: break-word; }
+  tr:nth-child(even) td { background: #f7f9fc; }
+  /* Column widths — ทั้งหมดรวมกัน = 100% ของ A4 landscape */
+  col.c1  { width: 7%; }   /* วันที่ */
+  col.c2  { width: 10%; }  /* ชื่องาน */
+  col.c3  { width: 9%; }   /* บริษัท */
+  col.c4  { width: 4%; }   /* จำนวน */
+  col.c5  { width: 6%; }   /* ประเภท */
+  col.c6  { width: 11%; }  /* ลักษณะความเสี่ยง */
+  col.c7  { width: 8%; }   /* ผู้ควบคุม */
+  col.c8  { width: 7%; }   /* Section */
+  col.c9  { width: 7%; }   /* เบอร์ควบคุม */
+  col.c10 { width: 7%; }   /* เจ้าของพื้นที่ */
+  col.c11 { width: 7%; }   /* หน่วยงาน */
+  col.c12 { width: 7%; }   /* เบอร์เจ้าของ */
+  col.c13 { width: 6%; }   /* อบรม */
+  col.c14 { width: 4%; }   /* รถ */
+  .footer { margin-top: 6px; font-size: 7pt; color: #aaa; text-align: right; }
+</style>
+</head><body>
+<div class="header">
+  <h1>📑 Work Details — Daily Job Confirmation</h1>
+  <div class="meta">
+    วันที่: ${date} &nbsp;|&nbsp; พื้นที่: ${areaLabel}<br>
+    พิมพ์: ${new Date().toLocaleString('th-TH')}
+  </div>
+</div>
+<div class="summary">
+  <div class="sum-box total">ทั้งหมด: ${rows.length} งาน</div>
+  <div class="sum-box high">High-Risk Work: ${highCount} งาน</div>
+  <div class="sum-box gen">General Work: ${genCount} งาน</div>
+</div>
+<table>
+  <colgroup>
+    <col class="c1"><col class="c2"><col class="c3"><col class="c4"><col class="c5"><col class="c6"><col class="c7">
+    <col class="c8"><col class="c9"><col class="c10"><col class="c11"><col class="c12"><col class="c13"><col class="c14">
+  </colgroup>
+  <thead><tr>
+    <th>วันที่ทำงาน</th><th>ชื่องาน</th><th>ชื่อบริษัท</th><th>จำนวน</th><th>ประเภทงาน</th><th>ลักษณะความเสี่ยง</th>
+    <th>ผู้ควบคุมงาน</th><th>Section</th><th>เบอร์ติดต่อ</th>
+    <th>ชื่อเจ้าของพื้นที่</th><th>หน่วยงานเจ้าของพื้นที่</th><th>เบอร์ติดต่อ</th>
+    <th>ผ่านการอบรม</th><th>รถ</th>
+  </tr></thead>
+  <tbody>${rowsHtml || '<tr><td colspan="14" style="text-align:center;padding:20px;color:#aaa">ไม่มีข้อมูล</td></tr>'}</tbody>
+</table>
+<div class="footer">Daily Job Confirmation Dashboard — exported ${date}</div>
+</body></html>`;
+
+  const win = window.open('', '_blank', 'width=1200,height=800');
+  win.document.write(html);
+  win.document.close();
+  win.onload = () => {
+    win.focus();
+    win.print();
+  };
+}
+
+let searchQuery = '';
+
+function onSearch() {
+  searchQuery = document.getElementById('searchInput').value.trim().toLowerCase();
+  const filtered = getFilteredByDate();
+  renderTable(filtered);
+  const hint = document.getElementById('searchHint');
+  hint.textContent = searchQuery ? `พบ ${applySearch(filtered).length} รายการ` : '';
+}
+
+function clearSearch() {
+  document.getElementById('searchInput').value = '';
+  searchQuery = '';
+  document.getElementById('searchHint').textContent = '';
+  renderTable(getFilteredByDate());
+}
+
+function applySearch(rows) {
+  if (!searchQuery) return rows;
+  return rows.filter(d => {
+    return [d['Job Name'],d['Company'],d['Controller Name'],d['Area Owner'],d['Owner Name'],d['Risk Sub Type']]
+      .some(v => (v||'').toLowerCase().includes(searchQuery));
+  });
+}
+
+// Auto-refresh ทุก 5 นาที (4.1)
+setInterval(loadData, 5 * 60 * 1000);
+
+loadData();
+</script>
+</body>
+</html>
