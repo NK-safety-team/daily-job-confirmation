@@ -5,7 +5,1019 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Job Confirmation</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/lea<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daily Job Confirmation</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh}
+.header{background:#1a3a5c;padding:16px 20px}
+.header h1{color:#fff;font-size:17px;font-weight:500}
+.header p{color:rgba(255,255,255,.65);font-size:12px;margin-top:3px}
+.deadline-bar{background:#c0392b;color:#fff;text-align:center;padding:8px;font-size:12px}
+
+.work-date-banner{background:#fff;border-bottom:2px solid #1a3a5c;padding:14px 20px;display:flex;align-items:center;gap:14px}
+.work-date-banner label{font-size:13px;font-weight:600;color:#1a3a5c;white-space:nowrap}
+.date-input-wrap{position:relative;display:inline-flex;align-items:center}
+.date-input-wrap input[type=date]{padding:8px 12px;font-size:15px;font-weight:500;border:1.5px solid #1a3a5c;border-radius:8px;color:#1a3a5c;background:#f7f9fc;cursor:pointer;min-width:160px;text-align:center}
+.date-input-wrap input[type=date]::-webkit-calendar-picker-indicator{display:none}
+.cont-btn{padding:8px 14px;font-size:12px;font-weight:500;border:1.5px solid #1a3a5c;border-radius:8px;background:#fff;color:#1a3a5c;cursor:pointer;white-space:nowrap;transition:all .15s}
+.cont-btn.active{background:#1a3a5c;color:#fff}
+.cont-panel{display:none;background:#f0f4fa;border-bottom:2px solid #1a3a5c;padding:14px 20px}
+.cont-panel.show{display:block}
+.quick-days{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.qd{font-size:12px;padding:3px 10px;border-radius:3px;border:1px solid #ccc;background:#fff;color:#333;cursor:pointer}
+.qd:hover{background:#f5f5f5}
+.cal-wrap{background:#fff;border:1px solid #ccc;border-radius:4px;padding:10px;max-width:310px}
+.cal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.cal-month-title{font-size:13px;font-weight:500;color:#0067b8;cursor:pointer;padding:3px 6px;border-radius:3px;border:none;background:none}
+.cal-month-title:hover{background:#f0f0f0}
+.cal-navs{display:flex}
+.cal-nav-btn{width:26px;height:26px;border:none;background:none;cursor:pointer;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#333;padding:0}
+.cal-nav-btn:hover{background:#f0f0f0}
+.cal-nav-btn svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);text-align:center}
+.cal-dh{font-size:11px;color:#666;padding:3px 0}
+.cal-d{font-size:13px;padding:0;cursor:pointer;border-radius:50%;color:#1a1a1a;width:30px;height:30px;display:flex;align-items:center;justify-content:center;margin:2px auto}
+.cal-d:hover:not(.cal-dim){background:#e8e8e8}
+.cal-d.cal-sel{background:#0067b8;color:#fff}
+.cal-d.cal-today{color:#0067b8;font-weight:600}
+.cal-d.cal-today.cal-sel{background:#0067b8;color:#fff}
+.cal-d.cal-dim{color:#ccc;cursor:not-allowed}
+.cal-d.cal-dim:hover{background:none}
+.cal-footer{display:flex;justify-content:space-between;margin-top:8px;padding-top:8px;border-top:1px solid #eee}
+.cal-foot-btn{font-size:12px;color:#0067b8;background:none;border:none;cursor:pointer;padding:2px 6px;border-radius:3px}
+.cal-foot-btn:hover{background:#e8f0fd}
+.cont-summary{font-size:12px;color:#0067b8;background:#e8f0fd;padding:6px 10px;border-radius:3px;margin-top:8px;max-width:310px}
+
+.form-wrap{max-width:600px;margin:0 auto;padding:20px 16px 40px}
+
+.section-card{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;margin-bottom:16px;overflow:hidden}
+.section-head{background:#1a3a5c;padding:12px 16px;display:flex;align-items:center;gap:8px}
+.section-head span{color:#fff;font-size:13px;font-weight:500}
+.section-num{background:rgba(255,255,255,.2);color:#fff;border-radius:50%;width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;flex-shrink:0}
+.section-body{padding:16px}
+
+.field{margin-bottom:14px}
+.field:last-child{margin-bottom:0}
+.field label{display:block;font-size:13px;font-weight:500;color:#333;margin-bottom:5px}
+.field label .req{color:#c0392b;margin-left:2px}
+.field input[type=text],.field input[type=tel],.field input[type=number],.field select,.field textarea{
+  width:100%;padding:10px 12px;font-size:14px;border:1px solid #d0d5dd;border-radius:8px;
+  background:#fff;color:#1a1a1a;transition:border-color .15s;-webkit-appearance:none
+}
+.field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:#1a3a5c;box-shadow:0 0 0 3px rgba(26,58,92,.1)}
+.field textarea{resize:vertical;min-height:70px;line-height:1.5}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+.readonly-field{width:100%;padding:10px 12px;font-size:14px;border:1px solid #e8e8e8;border-radius:8px;background:#f5f5f5;color:#666}
+
+.risk-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.risk-opt{position:relative}
+.risk-opt input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.risk-opt label{display:flex;align-items:center;justify-content:center;gap:6px;padding:11px;border-radius:8px;border:1.5px solid #d0d5dd;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;background:#fff}
+.risk-opt input:checked + label.gen{border-color:#2471a3;background:#eaf3fb;color:#2471a3}
+.risk-opt input:checked + label.high{border-color:#c0392b;background:#fdf0ee;color:#c0392b}
+
+.check-list{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.check-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border-radius:7px;border:1px solid #e8e8e8;background:#fafafa;cursor:pointer;transition:background .12s;user-select:none}
+.check-item:hover{background:#f0f4f9}
+.check-item input[type=checkbox]{margin-top:2px;accent-color:#1a3a5c;width:15px;height:15px;flex-shrink:0;cursor:pointer}
+.check-item label{font-size:12.5px;color:#333;line-height:1.4;cursor:pointer;flex:1}
+.check-item.checked{background:#eaf3fb;border-color:#2471a3}
+.check-item.checked-high{background:#fdf0ee;border-color:#c0392b}
+.other-input{margin-top:6px;width:100%;padding:8px 10px;font-size:13px;border:1px solid #d0d5dd;border-radius:7px;cursor:text}
+
+/* Draft banner */
+.draft-banner{display:none;background:#fff8e1;border-bottom:2px solid #f9a825;padding:10px 20px;font-size:12px;color:#7a5c00;align-items:center;gap:10px}
+.draft-banner.show{display:flex}
+.draft-banner button{padding:4px 12px;font-size:12px;border-radius:6px;border:1px solid #f9a825;background:#fff;color:#7a5c00;cursor:pointer}
+.draft-banner button.restore{background:#f9a825;color:#fff;border-color:#f9a825}
+
+/* Autofill dropdown */
+.autocomplete-wrap{position:relative}
+.autocomplete-list{position:absolute;top:100%;left:0;right:0;background:#fff;border:1px solid #d0d5dd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);z-index:200;max-height:180px;overflow-y:auto;display:none}
+.autocomplete-list.show{display:block}
+.autocomplete-item{padding:9px 12px;font-size:13px;color:#333;cursor:pointer;border-bottom:0.5px solid #f0f0f0}
+.autocomplete-item:last-child{border-bottom:none}
+.autocomplete-item:hover{background:#f0f4f9}
+.autocomplete-item small{display:block;font-size:11px;color:#999;margin-top:1px}
+
+/* Confirm modal */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.show{display:flex}
+.modal-box{background:#fff;border-radius:14px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-head{background:#1a3a5c;color:#fff;padding:14px 18px;border-radius:14px 14px 0 0;font-size:14px;font-weight:600;display:flex;justify-content:space-between;align-items:center}
+.modal-body{padding:16px 18px}
+.modal-row{display:flex;gap:8px;margin-bottom:10px;font-size:13px;border-bottom:0.5px solid #f0f0f0;padding-bottom:10px}
+.modal-row:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0}
+.modal-row .lbl{color:#888;min-width:120px;flex-shrink:0}
+.modal-row .val{color:#1a1a1a;font-weight:500;flex:1}
+.modal-row .val.high{color:#c0392b}
+.modal-row .val.gen{color:#2471a3}
+.modal-foot{padding:12px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid #f0f0f0}
+.modal-foot button{padding:9px 20px;font-size:13px;border-radius:8px;border:none;cursor:pointer;font-weight:500}
+.modal-cancel{background:#f0f0f0;color:#555}
+.modal-confirm{background:#1a3a5c;color:#fff}
+
+#map-section{display:none}
+.map-hint{font-size:12px;color:#666;margin-bottom:6px}
+#map{height:260px;border-radius:8px;border:1px solid #d0d5dd;overflow:hidden}
+.coord-display{margin-top:6px;padding:7px 12px;background:#eaf3fb;border-radius:6px;font-size:12px;color:#2471a3;display:none}
+
+.safety-opts{display:flex;flex-direction:column;gap:6px}
+.safety-opt{position:relative}
+.safety-opt input[type=radio]{position:absolute;opacity:0;width:0;height:0}
+.safety-opt label{display:block;padding:10px 14px;border-radius:8px;border:1.5px solid #d0d5dd;cursor:pointer;font-size:12.5px;transition:all .15s;background:#fff}
+.safety-opt input:checked + label{border-color:#1e8449;background:#eafaf1;color:#1e8449;font-weight:500}
+
+.submit-btn{width:100%;padding:14px;background:#1a3a5c;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;margin-top:20px;transition:background .15s}
+.submit-btn:hover{background:#14304f}
+.submit-btn:disabled{background:#aaa;cursor:not-allowed}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:8px;font-size:13px;font-weight:500;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
+.toast.error{background:#c0392b;color:#fff}
+.toast.show{opacity:1}
+
+/* Success page */
+#success-page{display:none;min-height:100vh;background:#1a1a1a;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+#success-page img{max-width:500px;width:100%;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.success-msg{margin-top:18px;font-size:15px;color:#fff;font-weight:500;text-align:center}
+.back-btn{margin-top:14px;padding:10px 28px;background:#fff;color:#1a3a5c;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500}
+
+@media(max-width:400px){.risk-toggle{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="form-page">
+  <div class="header">
+    <h1>Daily Job Confirmation</h1>
+    <p>แจ้งแผนงานประจำวัน — กรอกก่อน 15:00 เพื่อเข้าทำงานวันพรุ่งนี้</p>
+  </div>
+  <div class="deadline-bar">⏰ กรุณากรอกให้เสร็จก่อน 15:00 น. ของวันนี้</div>
+
+  <div class="work-date-banner">
+    <label>📅 วันที่เข้าทำงาน <span style="color:#c0392b">*</span></label>
+    <div class="date-input-wrap">
+      <input type="date" id="date" readonly onclick="toggleContinuous()" style="cursor:pointer">
+    </div>
+  </div>
+
+  <!-- panel ปฏิทินงานต่อเนื่อง -->
+  <div class="cont-panel" id="contPanel">
+    <div class="cont-panel-inner">
+      <div class="quick-days">
+        <span style="font-size:12px;color:#555">เลือกด่วน</span>
+        <button type="button" class="qd" onclick="quickSelect('weekdays')">จ–ศ</button>
+        <button type="button" class="qd" onclick="quickSelect('7days')">7 วันถัดไป</button>
+        <button type="button" class="qd" onclick="quickSelect('clear')">ล้าง</button>
+      </div>
+      <div class="cal-wrap">
+        <div class="cal-header">
+          <button type="button" class="cal-month-title" id="calMonthLabel"></button>
+          <div class="cal-navs">
+            <button type="button" class="cal-nav-btn" onclick="calNav(-1)" aria-label="เดือนก่อน">
+              <svg viewBox="0 0 14 14"><polyline points="11,10 7,6 3,10"/></svg>
+            </button>
+            <button type="button" class="cal-nav-btn" onclick="calNav(1)" aria-label="เดือนถัดไป">
+              <svg viewBox="0 0 14 14"><polyline points="3,4 7,8 11,4"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="cal-grid" id="calGrid">
+          <div class="cal-dh">อา</div><div class="cal-dh">จ</div><div class="cal-dh">อ</div><div class="cal-dh">พ</div><div class="cal-dh">พฤ</div><div class="cal-dh">ศ</div><div class="cal-dh">ส</div>
+        </div>
+        <div class="cal-footer">
+          <button type="button" class="cal-foot-btn" onclick="quickSelect('clear')">ล้าง</button>
+          <button type="button" class="cal-foot-btn" onclick="calGoToday()">วันนี้</button>
+        </div>
+      </div>
+      <div class="cont-summary" id="contSummary" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Draft banner -->
+  <div class="draft-banner" id="draftBanner">
+    <span>📝 มีข้อมูลที่กรอกค้างไว้ก่อนหน้า</span>
+    <button class="restore" onclick="restoreDraft()">กู้คืน</button>
+    <button onclick="clearDraft()">ละทิ้ง</button>
+  </div>
+
+  <!-- Confirm modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <span>📋 ตรวจสอบข้อมูลก่อนส่ง</span>
+        <span style="cursor:pointer;opacity:.7" onclick="closeModal()">✕</span>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+      <div class="modal-foot">
+        <button class="modal-cancel" onclick="closeModal()">แก้ไข</button>
+        <button class="modal-confirm" id="modalConfirmBtn" onclick="doSubmit()">ยืนยันส่งข้อมูล</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-wrap">
+
+    <!-- SECTION 1: รายละเอียดงาน -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-num">1</div>
+        <span>รายละเอียดงาน</span>
+      </div>
+      <div class="section-body">
+
+        <div class="field">
+          <label>ชื่องาน <span class="req">*</span></label>
+          <input type="text" id="jobName" placeholder="เช่น ซ่อมท่อน้ำ, ติดตั้งสายไฟ">
+        </div>
+
+        <div class="field">
+          <label>สถานที่ <span class="req">*</span></label>
+          <select id="areaOwner" onchange="handleAreaChange()">
+            <option value="">— เลือกสถานที่ —</option>
+            <option>GA</option><option>SP-1</option><option>SP-2</option><option>SP-3</option>
+            <option>EX</option><option>JP</option><option>UM</option><option>IC</option>
+            <option>QC</option><option>HR</option><option>OSEC</option><option>TTEC</option><option>TFTC</option>
+          </select>
+        </div>
+
+        <div id="map-section">
+          <div class="field">
+            <label>ระบุตำแหน่งงาน <span class="req">*</span> <span style="font-weight:400;color:#666">(คลิกบนแผนที่)</span></label>
+            <p class="map-hint">แตะหรือคลิกที่จุดที่จะทำงานบนแผนที่</p>
+            <div id="map"></div>
+            <div class="coord-display" id="coordDisplay"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>ประเภทงาน <span class="req">*</span></label>
+          <div class="risk-toggle">
+            <div class="risk-opt">
+              <input type="radio" name="riskType" id="riskGen" value="งานทั่วไป" onchange="handleRiskType()">
+              <label for="riskGen" class="gen">🔵 งานทั่วไป</label>
+            </div>
+            <div class="risk-opt">
+              <input type="radio" name="riskType" id="riskHigh" value="งานเสี่ยงสูง" onchange="handleRiskType()">
+              <label for="riskHigh" class="high">🔴 งานเสี่ยงสูง</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="risk-sub" style="display:none">
+          <div class="field">
+            <label id="riskSubLabel">ลักษณะความเสี่ยง <span class="req">*</span> <span style="font-weight:400;color:#888;font-size:11px">(เลือกได้หลายข้อ)</span></label>
+            <div class="check-list" id="riskSubList"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- SECTION 2: ผู้ควบคุมงาน -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-num">2</div>
+        <span>ผู้ควบคุมงาน (Controller)</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>ชื่อผู้ควบคุมงาน <span class="req">*</span></label>
+          <div class="autocomplete-wrap">
+            <input type="text" id="controllerName" placeholder="ชื่อ-นามสกุล" autocomplete="off" oninput="acInput('controllerName','controller')">
+            <div class="autocomplete-list" id="ac_controllerName"></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Section <span class="req">*</span></label>
+          <select id="controllerSection">
+            <option value="">— เลือก Section —</option>
+            <option>GA</option><option>SP-1</option><option>SP-2</option><option>SP-3</option>
+            <option>EX</option><option>JP</option><option>UM</option><option>IC</option>
+            <option>QC</option><option>HR</option><option>OSEC</option><option>TTEC</option><option>TFTC</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>เบอร์โทรติดต่อ <span class="req">*</span></label>
+          <input type="tel" id="controllerPhone" placeholder="เช่น 081-234-5678">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: เจ้าของพื้นที่ -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-num">3</div>
+        <span>เจ้าของพื้นที่ (Area Owner)</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>ชื่อเจ้าของพื้นที่</label>
+          <input type="text" id="ownerName" placeholder="ชื่อ-นามสกุล">
+        </div>
+        <div class="field">
+          <label>Section</label>
+          <div class="readonly-field" id="ownerSection">—</div>
+        </div>
+        <div class="field">
+          <label>เบอร์โทรติดต่อ</label>
+          <input type="tel" id="ownerPhone" placeholder="เช่น 081-234-5678">
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: บริษัทผู้รับเหมา -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-num">4</div>
+        <span>บริษัทผู้รับเหมา</span>
+      </div>
+      <div class="section-body">
+        <div class="field">
+          <label>ชื่อบริษัท <span class="req">*</span></label>
+          <input type="text" id="company" placeholder="เช่น บริษัท ABC จำกัด">
+        </div>
+        <div class="field">
+          <label>จำนวนผู้ปฏิบัติงาน <span class="req">*</span></label>
+          <input type="number" id="workers" placeholder="เช่น 5" min="1">
+        </div>
+        <div class="field">
+          <label>ผ่านการอบรมด้านความปลอดภัย <span class="req">*</span></label>
+          <div class="safety-opts">
+            <div class="safety-opt">
+              <input type="radio" name="safety" id="safetyYellow" value="ระเบียบความปลอดภัยในการทำงาน 6 ชั่วโมง (บัตรเหลือง)">
+              <label for="safetyYellow">🟡 ระเบียบความปลอดภัยในการทำงาน 6 ชั่วโมง (บัตรเหลือง)</label>
+            </div>
+            <div class="safety-opt">
+              <input type="radio" name="safety" id="safetyGreen" value="ระเบียบความปลอดภัยในการทำงาน 3 หรือ 6 ชั่วโมง (บัตรเขียว)">
+              <label for="safetyGreen">🟢 ระเบียบความปลอดภัยในการทำงาน 3 หรือ 6 ชั่วโมง (บัตรเขียว)</label>
+            </div>
+            <div class="safety-opt">
+              <input type="radio" name="safety" id="safetyExp" value="บัตรหมดอายุ">
+              <label for="safetyExp">🔴 บัตรหมดอายุ</label>
+            </div>
+          </div>
+        </div>
+        <div class="field">
+          <label>รถที่ไม่ใช่รถยนต์ส่วนบุคคลเข้าในโรงงาน</label>
+          <input type="text" id="vehicles" placeholder="เช่น รถเฮี๊ยบ, รถเครน (ถ้าไม่มีเว้นว่าง)">
+        </div>
+      </div>
+    </div>
+
+    <button class="submit-btn" id="submitBtn" onclick="submitForm()">ส่งข้อมูล</button>
+  </div>
+</div>
+
+<!-- SUCCESS PAGE -->
+<div id="success-page">
+  <img src="" alt="ประชาสัมพันธ์ความปลอดภัย" id="prImg">
+  <div class="success-msg">✅ ส่งข้อมูลสำเร็จแล้ว</div>
+  <button class="back-btn" onclick="resetForm()">กรอกข้อมูลใหม่</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwPWm5X_MvcEf7i2mUPWsxvYIKMUdzgBkeyAA4--OxceTUdN1RNvHPeKnWJsxTNYWaf/exec';
+const SECRET_TOKEN = 'NK-SAFETY-2026';
+
+const TOTAL_IMAGES = 2; // เปลี่ยนเป็น 100 เมื่อมีครบ
+
+const AREA_COORDS = {
+  'SP-1': {lat:14.387207272557273, lng:100.91187187339625},
+  'SP-2': {lat:14.387294721702682, lng:100.91262866795552},
+  'SP-3': {lat:14.387631575209893, lng:100.91002477791608},
+  'EX':   {lat:14.387388089271441, lng:100.91071189348084},
+  'JP':   {lat:14.387327588884506, lng:100.91504887603202},
+  'UM':   {lat:14.386406573754776, lng:100.910307155975},
+  'IC':   {lat:14.38634062858975,  lng:100.91235884076252},
+  'GA':   {lat:14.387103222079801, lng:100.9138467220225},
+  'QC':   {lat:14.387055452625024, lng:100.91402284561495},
+  'HR':   {lat:14.387103222079801, lng:100.9138467220225},
+  'OSEC': {lat:14.387103222079801, lng:100.9138467220225},
+  'TFTC': {lat:14.386833701903061, lng:100.91317780081879},
+  'TTEC': {lat:14.387112604264932, lng:100.91445203516018},
+};
+
+const GENERAL_RISKS = [
+  'ไฟฟ้า / Electric',
+  'เสียงดัง / Noise',
+  'สารเคมีอันตราย / Hazardous Chemical',
+  'เครื่องจักรที่มีส่วนเคลื่อนไหว / Machine with moving part',
+  'ประกายไฟ / Hot work',
+  'รถยก / Forklift',
+  'งานบนที่สูง ไม่เกิน 6 เมตร / Work at high < 6m.',
+  'ยกของด้วยกำลังคน / Lifting by man power',
+  'เครื่องจักรหนักในงานก่อสร้าง / Heavy Machine for construction',
+  'อื่นๆ',
+];
+
+const HIGH_RISKS = [
+  'งานในที่มีความเสี่ยงสูงต่อการเกิดไฟไหม้หรือระเบิด / High risk area for fire or explosion',
+  'สารเคมีที่มีความเป็นอันตรายสูง / High hazard chemical',
+  'งานไฟฟ้าที่มีแรงดันระหว่างสาย มากกว่า 400 โวลต์ / Electrical > 400 voltage',
+  'งานยกและเคลื่อนย้าย ด้วยรถเครน, รถบรรทุกติดเครน (เฮี๊ยบ), ทาวเวอร์เครน / Heavy lifting, Boomlift',
+  'งานยกย้ายวัสดุด้วยรอกมือตั้งแต่ 1 ตัน ขึ้นไป',
+  'งานบนที่สูงตั้งแต่ 6 เมตร / Work at high ≥ 6m.',
+  'งานที่อับอากาศ / Confined Spaces',
+];
+
+let selectedLat = null, selectedLng = null;
+let mapInstance = null, clickMarker = null;
+
+function toLocalDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+const today = new Date();
+const tomorrow = new Date(today);
+tomorrow.setDate(today.getDate() + 1);
+const tomorrowStr = toLocalDateStr(tomorrow);
+const todayStr = toLocalDateStr(today);
+document.getElementById('date').value = tomorrowStr;
+document.getElementById('date').min = todayStr;
+
+const MAP_CLICK_AREAS = ['GA', 'IC', 'EX', 'JP'];
+
+function handleAreaChange() {
+  const area = document.getElementById('areaOwner').value;
+
+  // Area Owner section — ล็อค Section ตามสถานที่
+  document.getElementById('ownerSection').textContent = area || '—';
+
+  // Map
+  const mapSec = document.getElementById('map-section');
+  if (MAP_CLICK_AREAS.includes(area)) {
+    mapSec.style.display = 'block';
+    // Set default location จากพิกัดที่กำหนด แต่ยังไม่ lock — ให้คลิกเลือกเองได้
+    const def = AREA_COORDS[area];
+    selectedLat = def ? def.lat : null;
+    selectedLng = def ? def.lng : null;
+    initMap(def);
+  } else {
+    mapSec.style.display = 'none';
+    selectedLat = area ? AREA_COORDS[area]?.lat : null;
+    selectedLng = area ? AREA_COORDS[area]?.lng : null;
+  }
+}
+
+function getMarkerColor() {
+  const risk = document.querySelector('input[name=riskType]:checked')?.value;
+  if (risk === 'งานเสี่ยงสูง') return '#c0392b';
+  if (risk === 'งานทั่วไป') return '#2471a3';
+  return '#ffffff';
+}
+
+function updateMarkerColor() {
+  if (!clickMarker) return;
+  const color = getMarkerColor();
+  clickMarker.setStyle({fillColor: color});
+}
+
+function initMap(defaultCoord) {
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; clickMarker = null; }
+  const center = defaultCoord ? [defaultCoord.lat, defaultCoord.lng] : [14.387103, 100.91285];
+  setTimeout(() => {
+    mapInstance = L.map('map').setView(center, 18);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:20}).addTo(mapInstance);
+    if (defaultCoord) {
+      clickMarker = L.circleMarker(center, {radius:10,fillColor:'#ffffff',color:'#fff',weight:2,fillOpacity:.9}).addTo(mapInstance);
+      const cd = document.getElementById('coordDisplay');
+      cd.style.display = 'block';
+      cd.textContent = '📍 ' + defaultCoord.lat.toFixed(6) + ', ' + defaultCoord.lng.toFixed(6) + ' (default — คลิกเพื่อเปลี่ยน)';
+    } else {
+      document.getElementById('coordDisplay').style.display = 'none';
+    }
+    mapInstance.on('click', function(e) {
+      selectedLat = e.latlng.lat; selectedLng = e.latlng.lng;
+      if (clickMarker) mapInstance.removeLayer(clickMarker);
+      clickMarker = L.circleMarker([selectedLat, selectedLng], {radius:10,fillColor:getMarkerColor(),color:'#fff',weight:2,fillOpacity:.9}).addTo(mapInstance);
+      const cd = document.getElementById('coordDisplay');
+      cd.style.display = 'block';
+      cd.textContent = '📍 ' + selectedLat.toFixed(6) + ', ' + selectedLng.toFixed(6);
+    });
+  }, 100);
+}
+
+function handleRiskType() {
+  const val = document.querySelector('input[name=riskType]:checked')?.value;
+  const subDiv = document.getElementById('risk-sub');
+  const list = document.getElementById('riskSubList');
+  if (!val) { subDiv.style.display = 'none'; return; }
+  subDiv.style.display = 'block';
+  updateMarkerColor();
+  const items = val === 'งานทั่วไป' ? GENERAL_RISKS : HIGH_RISKS;
+  const isHigh = val === 'งานเสี่ยงสูง';
+  list.innerHTML = '';
+  items.forEach((item, i) => {
+    const isOther = item === 'อื่นๆ';
+    const div = document.createElement('div');
+    div.className = 'check-item';
+    div.innerHTML = `<input type="checkbox" id="risk_${i}" value="${isOther ? '__other__' : item}">
+      <label for="risk_${i}">${item}${isOther ? '<br><input type="text" class="other-input" id="otherText" placeholder="ระบุ..." onclick="event.stopPropagation()">' : ''}</label>`;
+    const cb = div.querySelector('input[type=checkbox]');
+    cb.addEventListener('change', function() {
+      div.className = 'check-item' + (this.checked ? (isHigh ? ' checked-high' : ' checked') : '');
+    });
+    div.addEventListener('click', function(e) {
+      // ไม่ให้ label/input trigger ซ้ำ
+      if (e.target === cb || e.target.tagName === 'LABEL' || e.target.classList.contains('other-input')) return;
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event('change'));
+    });
+    list.appendChild(div);
+  });
+}
+
+function getCheckedRisks() {
+  const checks = document.querySelectorAll('#riskSubList input[type=checkbox]:checked');
+  return Array.from(checks).map(c => {
+    if (c.value === '__other__') {
+      const other = document.getElementById('otherText');
+      return 'อื่นๆ: ' + (other ? other.value.trim() : '');
+    }
+    return c.value;
+  }).join(', ');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast error show';
+  setTimeout(() => { t.className = 'toast error'; }, 3500);
+}
+
+function showSuccessPage() {
+  const num = Math.floor(Math.random() * TOTAL_IMAGES) + 1;
+  document.getElementById('prImg').src = 'images/' + num + '.png';
+  document.getElementById('form-page').style.display = 'none';
+  document.getElementById('success-page').style.display = 'flex';
+}
+
+function resetForm() {
+  document.getElementById('success-page').style.display = 'none';
+  document.getElementById('form-page').style.display = 'block';
+  window.scrollTo(0, 0);
+}
+
+// แปลงเบอร์โทรให้เป็น 0XX-XXX-XXXX เสมอ
+function normalizePhone(raw) {
+  if (!raw) return '';
+  let d = raw.replace(/\D/g, '');
+  if (d.length === 9) d = '0' + d;   // Sheets ตัด 0 นำหน้าออก → เติมกลับ
+  if (d.length === 10) return `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  return raw;
+}
+
+// Auto-format ขณะพิมพ์ใน input เบอร์โทร
+function setupPhoneInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', function() {
+    let d = this.value.replace(/\D/g, '');
+    if (d.length === 0) { this.value = ''; return; }
+    if (d.length > 10) d = d.slice(0, 10);
+    if (d.length <= 3)      this.value = d;
+    else if (d.length <= 6) this.value = `${d.slice(0,3)}-${d.slice(3)}`;
+    else                    this.value = `${d.slice(0,3)}-${d.slice(3,6)}-${d.slice(6)}`;
+  });
+}
+
+// ===== งานต่อเนื่อง =====
+let isContinuous = false;
+let selectedDates = []; // array of "YYYY-MM-DD"
+let calYear, calMonth;
+
+function onDateChange() {
+  const val = document.getElementById('date').value;
+  if (!val) return;
+  // ถ้ายังไม่เคยเลือกผ่าน calendar ให้ set วันที่จาก input เป็น default
+  if (!selectedDates.includes(val)) {
+    selectedDates = [val];
+  }
+  // เปิด panel calendar
+  const panel = document.getElementById('contPanel');
+  calYear = parseInt(val.split('-')[0]);
+  calMonth = parseInt(val.split('-')[1]) - 1;
+  renderCal();
+  panel.classList.add('show');
+}
+
+function toggleContinuous() {
+  const panel = document.getElementById('contPanel');
+  panel.classList.toggle('show');
+  if (panel.classList.contains('show')) {
+    const val = document.getElementById('date').value;
+    if (val) { calYear = parseInt(val.split('-')[0]); calMonth = parseInt(val.split('-')[1]) - 1; }
+    else { const n = new Date(); calYear = n.getFullYear(); calMonth = n.getMonth(); }
+    renderCal();
+  }
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function calGoToday() {
+  const t = new Date();
+  calYear = t.getFullYear();
+  calMonth = t.getMonth();
+  renderCal();
+}
+
+function renderCal() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const maxDate = new Date(today); maxDate.setDate(today.getDate() + 14);
+  const MONTHS_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  document.getElementById('calMonthLabel').textContent = `${MONTHS_TH[calMonth]} ${calYear + 543}`;
+  const grid = document.getElementById('calGrid');
+  while (grid.children.length > 7) grid.removeChild(grid.lastChild);
+  const dow = new Date(calYear, calMonth, 1).getDay(); // 0=Sun
+  for (let i = 0; i < dow; i++) grid.appendChild(document.createElement('div'));
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(calYear, calMonth, d);
+    const dstr = toLocalDateStr(dt);
+    const div = document.createElement('div');
+    div.className = 'cal-d';
+    div.textContent = d;
+    if (dt < today || dt > maxDate) {
+      div.classList.add('cal-dim');
+    } else {
+      if (toLocalDateStr(today) === dstr) div.classList.add('cal-today');
+      if (selectedDates.includes(dstr)) div.classList.add('cal-sel');
+      div.onclick = () => toggleDate(dstr);
+    }
+    grid.appendChild(div);
+  }
+  updateContSummary();
+}
+
+function syncDateInput() {
+  const inp = document.getElementById('date');
+  if (selectedDates.length > 0) inp.value = selectedDates[0];
+}
+
+let rangeAnchor = null;
+let excludedDates = [];
+
+function toggleDate(dstr) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const maxDate = new Date(today); maxDate.setDate(today.getDate() + 14);
+
+  if (!rangeAnchor) {
+    // คลิกแรก — set anchor
+    rangeAnchor = dstr;
+    excludedDates = [];
+    selectedDates = [dstr];
+  } else if (selectedDates.includes(dstr) && dstr !== rangeAnchor) {
+    // คลิกวันใน range — toggle exclude
+    const exIdx = excludedDates.indexOf(dstr);
+    if (exIdx >= 0) excludedDates.splice(exIdx, 1);
+    else excludedDates.push(dstr);
+    selectedDates = buildRange(rangeAnchor, rangeEnd(), today, maxDate).filter(s => !excludedDates.includes(s));
+  } else if (dstr === rangeAnchor && selectedDates.length === 1) {
+    // คลิก anchor ซ้ำตอนเลือกวันเดียว — ยกเลิก
+    rangeAnchor = null; excludedDates = []; selectedDates = [];
+  } else {
+    // คลิกวันใหม่นอก range — ขยาย range
+    excludedDates = [];
+    const newRange = buildRange(rangeAnchor, dstr, today, maxDate);
+    if (newRange.length > 7) { showToast('เลือกได้สูงสุด 7 วัน'); return; }
+    selectedDates = newRange;
+    if (rangeAnchor > dstr) rangeAnchor = dstr; // anchor เป็นวันเล็กกว่าเสมอ
+  }
+
+  syncDateInput();
+  renderCal();
+}
+
+function rangeEnd() {
+  return selectedDates.length ? selectedDates[selectedDates.length - 1] : rangeAnchor;
+}
+
+function buildRange(a, b, today, maxDate) {
+  const start = a < b ? a : b;
+  const end   = a < b ? b : a;
+  const range = [];
+  let cur = new Date(start);
+  const endD = new Date(end);
+  while (cur <= endD) {
+    const s = toLocalDateStr(new Date(cur));
+    const dt = new Date(cur);
+    if (dt > today && dt <= maxDate) range.push(s);
+    cur.setDate(cur.getDate() + 1);
+  }
+  return range;
+}
+
+function quickSelect(type) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const maxDate = new Date(today); maxDate.setDate(today.getDate() + 14);
+  selectedDates = []; rangeAnchor = null; excludedDates = [];
+
+  if (type === 'clear') { syncDateInput(); renderCal(); return; }
+
+  if (type === '7days') {
+    for (let i = 1; i <= 7; i++) {
+      const d = new Date(today); d.setDate(today.getDate() + i);
+      if (d <= maxDate) selectedDates.push(toLocalDateStr(d));
+    }
+  }
+
+  if (type === 'weekdays') {
+    const dow = today.getDay(); // 0=Sun,1=Mon,...,6=Sat
+    let start;
+    if (dow === 0 || dow >= 5) {
+      // อา(0), ศ(5), ส(6) → จ-ศ สัปดาห์ถัดไป
+      const daysToMon = dow === 0 ? 1 : (8 - dow);
+      start = new Date(today); start.setDate(today.getDate() + daysToMon);
+    } else {
+      // จ(1)→อ, อ(2)→พ, พ(3)→พฤ, พฤ(4)→ศ
+      start = new Date(today); start.setDate(today.getDate() + 1);
+    }
+    // หา end = ศุกร์ของสัปดาห์ที่ start อยู่
+    const end = new Date(start);
+    const daysToFri = (5 - start.getDay() + 7) % 7;
+    end.setDate(start.getDate() + daysToFri);
+
+    let cur = new Date(start);
+    while (cur <= end && selectedDates.length < 7) {
+      if (cur > today && cur <= maxDate) selectedDates.push(toLocalDateStr(new Date(cur)));
+      cur.setDate(cur.getDate() + 1);
+    }
+  }
+
+  syncDateInput();
+  renderCal();
+}
+
+function updateContSummary() {
+  const el = document.getElementById('contSummary');
+  if (!selectedDates.length) { el.style.display = 'none'; return; }
+  el.style.display = 'block';
+  const fmt = selectedDates.map(s => {
+    const [y,m,d] = s.split('-');
+    return `${parseInt(d)}/${parseInt(m)}`;
+  }).join(', ');
+  el.textContent = `✅ เลือกแล้ว ${selectedDates.length} วัน: ${fmt}`;
+}
+
+// ===== END งานต่อเนื่อง =====
+
+function submitForm() {
+  const date = document.getElementById('date').value;
+  const jobName = document.getElementById('jobName').value.trim();
+  const area = document.getElementById('areaOwner').value;
+  const riskTypeEl = document.querySelector('input[name=riskType]:checked');
+  const controllerName = document.getElementById('controllerName').value.trim();
+  const controllerSection = document.getElementById('controllerSection').value;
+  const controllerPhone = normalizePhone(document.getElementById('controllerPhone').value.trim());
+  const ownerPhone = normalizePhone(document.getElementById('ownerPhone').value.trim());
+  const company = document.getElementById('company').value.trim();
+  const workers = document.getElementById('workers').value.trim();
+  const safetyEl = document.querySelector('input[name=safety]:checked');
+
+  if (isContinuous) {
+    if (!selectedDates.length) return showToast('กรุณาเลือกวันที่อย่างน้อย 1 วัน');
+  } else {
+    if (!date) return showToast('กรุณาเลือกวันที่เข้าทำงาน');
+  }
+  if (!jobName) return showToast('กรุณากรอกชื่องาน');
+  if (!area) return showToast('กรุณาเลือกสถานที่');
+  if (MAP_CLICK_AREAS.includes(area) && (!selectedLat || !selectedLng)) return showToast('กรุณาคลิกเลือกตำแหน่งบนแผนที่');
+  if (!riskTypeEl) return showToast('กรุณาเลือกประเภทงาน');
+  const riskSub = getCheckedRisks();
+  if (!riskSub) return showToast('กรุณาเลือกลักษณะความเสี่ยงอย่างน้อย 1 ข้อ');
+  if (!controllerName) return showToast('กรุณากรอกชื่อผู้ควบคุมงาน');
+  if (!controllerSection) return showToast('กรุณาเลือก Section ของผู้ควบคุมงาน');
+  if (!controllerPhone) return showToast('กรุณากรอกเบอร์โทรผู้ควบคุมงาน');
+  if (!validatePhone(controllerPhone)) return showToast('เบอร์โทรผู้ควบคุมงานต้องครบ 10 หลัก');
+  if (ownerPhone && !validatePhone(ownerPhone)) return showToast('เบอร์โทรเจ้าของพื้นที่ต้องครบ 10 หลัก');
+  if (!company) return showToast('กรุณากรอกชื่อบริษัท');
+  if (!workers) return showToast('กรุณากรอกจำนวนผู้ปฏิบัติงาน');
+  if (!safetyEl) return showToast('กรุณาเลือกประเภทการอบรมความปลอดภัย');
+
+  // ป้องกัน double submit (2.2)
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+
+  const basePayload = {
+    token: SECRET_TOKEN,
+    jobName, areaOwner: area,
+    riskType: riskTypeEl.value, riskSubType: riskSub,
+    controllerName, controllerSection, controllerPhone,
+    ownerName: document.getElementById('ownerName').value.trim(),
+    ownerSection: area, ownerPhone,
+    company, workers, safetyTraining: safetyEl.value,
+    vehicles: document.getElementById('vehicles').value.trim(),
+    lat: selectedLat ? selectedLat.toFixed(6) : AREA_COORDS[area]?.lat.toFixed(6),
+    lng: selectedLng ? selectedLng.toFixed(6) : AREA_COORDS[area]?.lng.toFixed(6),
+  };
+
+  const dates = isContinuous ? selectedDates : [date];
+  // แสดง confirm modal (1.2) แทนส่งทันที
+  showConfirmModal(basePayload, dates);
+}
+
+// ===== AUTOFILL (1.1) =====
+const AC_KEY = 'djc_controllers';
+const DRAFT_KEY = 'djc_draft';
+const DRAFT_TTL = 30 * 60 * 1000; // 30 นาที
+
+function getControllers() {
+  try { return JSON.parse(localStorage.getItem(AC_KEY)) || []; } catch { return []; }
+}
+
+function saveController(name, section, phone) {
+  if (!name) return;
+  let list = getControllers().filter(c => c.name !== name);
+  list.unshift({ name, section, phone });
+  if (list.length > 10) list = list.slice(0, 10);
+  localStorage.setItem(AC_KEY, JSON.stringify(list));
+}
+
+function acInput(fieldId, type) {
+  const val = document.getElementById(fieldId).value.trim().toLowerCase();
+  const drop = document.getElementById('ac_' + fieldId);
+  if (!val) { drop.classList.remove('show'); return; }
+  const list = getControllers().filter(c => c.name.toLowerCase().includes(val));
+  if (!list.length) { drop.classList.remove('show'); return; }
+  drop.innerHTML = list.map(c => `
+    <div class="autocomplete-item" onclick="fillController('${c.name.replace(/'/g,"\\'")}','${(c.section||'').replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}')">
+      ${c.name}<small>${c.section || ''} ${c.phone || ''}</small>
+    </div>`).join('');
+  drop.classList.add('show');
+}
+
+function fillController(name, section, phone) {
+  document.getElementById('controllerName').value = name;
+  if (section) document.getElementById('controllerSection').value = section;
+  if (phone) { document.getElementById('controllerPhone').value = phone; }
+  document.getElementById('ac_controllerName').classList.remove('show');
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    document.querySelectorAll('.autocomplete-list').forEach(d => d.classList.remove('show'));
+  }
+});
+
+// ===== DRAFT (1.3) =====
+function saveDraft() {
+  const draft = {
+    ts: Date.now(),
+    jobName: document.getElementById('jobName').value,
+    areaOwner: document.getElementById('areaOwner').value,
+    riskType: document.querySelector('input[name=riskType]:checked')?.value || '',
+    controllerName: document.getElementById('controllerName').value,
+    controllerSection: document.getElementById('controllerSection').value,
+    controllerPhone: document.getElementById('controllerPhone').value,
+    ownerName: document.getElementById('ownerName').value,
+    ownerPhone: document.getElementById('ownerPhone').value,
+    company: document.getElementById('company').value,
+    workers: document.getElementById('workers').value,
+    vehicles: document.getElementById('vehicles').value,
+  };
+  // บันทึกเฉพาะถ้ามีข้อมูลบางอย่าง
+  if (draft.jobName || draft.controllerName || draft.company) {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }
+}
+
+function checkDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!d) return;
+    if (Date.now() - d.ts > DRAFT_TTL) { localStorage.removeItem(DRAFT_KEY); return; }
+    document.getElementById('draftBanner').classList.add('show');
+  } catch {}
+}
+
+function restoreDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY));
+    if (!d) return;
+    if (d.jobName) document.getElementById('jobName').value = d.jobName;
+    if (d.areaOwner) { document.getElementById('areaOwner').value = d.areaOwner; handleAreaChange(); }
+    if (d.controllerName) document.getElementById('controllerName').value = d.controllerName;
+    if (d.controllerSection) document.getElementById('controllerSection').value = d.controllerSection;
+    if (d.controllerPhone) document.getElementById('controllerPhone').value = d.controllerPhone;
+    if (d.ownerName) document.getElementById('ownerName').value = d.ownerName;
+    if (d.ownerPhone) document.getElementById('ownerPhone').value = d.ownerPhone;
+    if (d.company) document.getElementById('company').value = d.company;
+    if (d.workers) document.getElementById('workers').value = d.workers;
+    if (d.vehicles) document.getElementById('vehicles').value = d.vehicles;
+    if (d.riskType) {
+      const rb = document.querySelector(`input[name=riskType][value="${d.riskType}"]`);
+      if (rb) { rb.checked = true; handleRiskType(); }
+    }
+    clearDraft();
+    showToast('กู้คืนข้อมูลที่กรอกค้างไว้แล้ว');
+  } catch {}
+}
+
+function clearDraft() {
+  localStorage.removeItem(DRAFT_KEY);
+  document.getElementById('draftBanner').classList.remove('show');
+}
+
+// auto-save draft ทุก 30 วินาที
+setInterval(saveDraft, 30000);
+// บันทึก draft ก่อนออกจากหน้า
+window.addEventListener('beforeunload', saveDraft);
+// เช็ค draft ตอนโหลด
+checkDraft();
+
+// ===== VALIDATE PHONE (2.1) =====
+function validatePhone(val) {
+  const digits = val.replace(/\D/g, '');
+  return digits.length === 10;
+}
+
+// ===== CONFIRM MODAL (1.2) =====
+let pendingPayload = null;
+
+function closeModal() {
+  document.getElementById('confirmModal').classList.remove('show');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = false;
+  btn.textContent = 'ส่งข้อมูล';
+  pendingPayload = null;
+}
+
+function showConfirmModal(payload, dates) {
+  pendingPayload = { payload, dates };
+  const isH = payload.riskType === 'งานเสี่ยงสูง';
+  const datesStr = dates.map(s => { const[y,m,d]=s.split('-'); return `${d}/${m}/${y}`; }).join(', ');
+  document.getElementById('modalBody').innerHTML = `
+    <div class="modal-row"><span class="lbl">วันที่ทำงาน</span><span class="val">${datesStr}</span></div>
+    <div class="modal-row"><span class="lbl">ชื่องาน</span><span class="val">${payload.jobName}</span></div>
+    <div class="modal-row"><span class="lbl">สถานที่</span><span class="val">${payload.areaOwner}</span></div>
+    <div class="modal-row"><span class="lbl">ประเภทงาน</span><span class="val ${isH?'high':'gen'}">${isH?'High-Risk Work':'General Work'}</span></div>
+    <div class="modal-row"><span class="lbl">ลักษณะความเสี่ยง</span><span class="val">${payload.riskSubType}</span></div>
+    <div class="modal-row"><span class="lbl">ผู้ควบคุมงาน</span><span class="val">${payload.controllerName}</span></div>
+    <div class="modal-row"><span class="lbl">Section</span><span class="val">${payload.controllerSection}</span></div>
+    <div class="modal-row"><span class="lbl">เบอร์ติดต่อ</span><span class="val">${payload.controllerPhone}</span></div>
+    <div class="modal-row"><span class="lbl">บริษัท</span><span class="val">${payload.company}</span></div>
+    <div class="modal-row"><span class="lbl">จำนวนผู้ปฏิบัติงาน</span><span class="val">${payload.workers} คน</span></div>
+    <div class="modal-row"><span class="lbl">การอบรมความปลอดภัย</span><span class="val">${payload.safetyTraining}</span></div>
+    ${payload.vehicles ? `<div class="modal-row"><span class="lbl">รถอื่นๆ</span><span class="val">${payload.vehicles}</span></div>` : ''}
+  `;
+  document.getElementById('confirmModal').classList.add('show');
+}
+
+function doSubmit() {
+  if (!pendingPayload) return;
+  const { payload, dates } = pendingPayload;
+  const confirmBtn = document.getElementById('modalConfirmBtn');
+  confirmBtn.disabled = true;
+  confirmBtn.textContent = `กำลังส่ง 0/${dates.length}...`;
+
+  function sendNext(i) {
+    if (i >= dates.length) {
+      confirmBtn.disabled = false;
+      document.getElementById('confirmModal').classList.remove('show');
+      clearDraft();
+      saveController(payload.controllerName, payload.controllerSection, payload.controllerPhone);
+      const btn = document.getElementById('submitBtn');
+      btn.disabled = false; btn.textContent = 'ส่งข้อมูล';
+      showSuccessPage();
+      return;
+    }
+    confirmBtn.textContent = `กำลังส่ง ${i+1}/${dates.length}...`;
+    fetch(SCRIPT_URL, {
+      method:'POST', mode:'no-cors',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ ...payload, date: dates[i] })
+    }).then(() => sendNext(i+1))
+      .catch(() => {
+        showToast(`เกิดข้อผิดพลาดวันที่ ${dates[i]} กรุณาลองใหม่`);
+        confirmBtn.disabled = false;
+        confirmBtn.textContent = 'ยืนยันส่งข้อมูล';
+      });
+  }
+  sendNext(0);
+}
+
+setupPhoneInput('controllerPhone');
+setupPhoneInput('ownerPhone');
+</script>
+</body>
+</html>
+flet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Segoe UI',sans-serif;background:#f0f2f5;color:#1a1a1a;min-height:100vh}
